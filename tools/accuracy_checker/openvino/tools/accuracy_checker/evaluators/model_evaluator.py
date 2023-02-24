@@ -19,6 +19,7 @@ import pickle # nosec - disable B403:import-pickle check
 import platform
 from pathlib import Path
 import numpy as np
+import os
 
 from ..utils import get_path, extract_image_representations, is_path
 from ..dataset import Dataset
@@ -412,6 +413,25 @@ class ModelEvaluator(BaseEvaluator):
         for batch_id, (batch_input_ids, batch_annotation, batch_input, batch_identifiers) in enumerate(self.dataset):
             filled_inputs, batch_meta, _ = self._get_batch_input(batch_annotation, batch_input)
             batch_predictions = self.launcher.predict(filled_inputs, batch_meta, **kwargs)
+
+            if self.dataset.name == "CamVid":
+                # dump unet prepocessed inputs
+                unet_prepocess_input_dir = \
+                    '/mnt/sh_flex_storage/projects/quantize/haiyun_share/dumped_npy/unet_fp16/dumped_data'
+                if not os.path.exists(unet_prepocess_input_dir):
+                    os.makedirs(unet_prepocess_input_dir)
+                np.save(f"{unet_prepocess_input_dir}/{batch_id}_input.npy", filled_inputs[0]["input.1"])
+
+            elif self.dataset.name == "COCO2017_detection_80cl":
+                # dump tiny-yolo-v4 prepocessed inputs
+                dir = '/mnt/sh_flex_storage/projects/quantize/haiyun_share/dumped_npy/yolo-v4-tiny-fp16/dumped_data'
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+                np.save(f"{dir}/{batch_id}_input.npy", filled_inputs[0]["image_input"])
+
+            else:
+                raise TypeError(f'not support dump this dataset:{self.dataset.name}, only support Camvid and COCO2017_detection_80cl')
+
             if stored_predictions:
                 self.prepare_prediction_to_store(batch_predictions, batch_identifiers, batch_meta, stored_predictions)
             if not store_only:
