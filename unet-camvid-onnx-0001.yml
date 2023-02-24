@@ -1,0 +1,39 @@
+models:
+  - name: unet-camvid-onnx-0001
+
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        model: /mnt/sh_flex_storage/home/haiyunho/now/frameworks.vpu.models.nbgraph/binary/nbgraph-bin-2/UnetAutoencoder/Surface/FP16/unet-camvid-onnx-0001.xml
+        weights: /mnt/sh_flex_storage/home/haiyunho/now/frameworks.vpu.models.nbgraph/binary/nbgraph-bin-2/UnetAutoencoder/Surface/FP16/unet-camvid-onnx-0001.bin
+        adapter: segmentation
+
+    datasets:
+      - name: CamVid
+        data_source: /mnt/sh_flex_storage/projects/quantize/peiqing_share/data_omz/CamVid
+        annotation_conversion:
+            converter: camvid
+            annotation_file: /mnt/sh_flex_storage/projects/quantize/peiqing_share/data_omz/CamVid/val.txt
+        annotation: camvid.pickle
+        dataset_meta: /mnt/sh_flex_storage/projects/quantize/haiyun_share/labels.json
+        reader: pillow_imread
+
+        preprocessing:
+          - type: resize
+            dst_height: 368
+            dst_width: 480
+            use_pillow: True
+            interpolation: BILINEAR
+          - type: rgb_to_bgr
+
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            dst_height: 368
+            dst_width: 480
+
+        metrics:
+          - type: mean_iou
+            use_argmax: True
+            ignore_label: 11
+            presenter: print_vector
